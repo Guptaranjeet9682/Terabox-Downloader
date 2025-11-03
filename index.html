@@ -83,7 +83,7 @@
         <!-- Footer -->
         <footer class="mt-16 text-center text-gray-600">
             <p class="text-sm mb-2">This tool is for personal and educational purposes only. Respect copyright laws.</p>
-            <p class="text-sm">Powered by <a href="https://t.me/anshapi" target="_blank" class="text-blue-600 hover:underline">AnshAPI</a></p>
+            <p class="text-sm">Powered by <a href="https://t.me/Tech_Anish" target="_blank" class="text-blue-600 hover:underline">AnishAPI</a></p>
         </footer>
     </div>
 
@@ -126,17 +126,33 @@
             hideResult();
 
             try {
+                // Fixed API call with proper error handling
                 const apiUrl = `https://teraboxapi.alphaapi.workers.dev/?url=${encodeURIComponent(url)}`;
-                const response = await fetch(apiUrl);
+                console.log('Fetching from:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    mode: 'cors'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
+                console.log('API Response:', data);
 
                 if (data.success && data.files && data.files.length > 0) {
                     showResult(data.files[0]);
                 } else {
-                    showError(data.message || 'Failed to fetch file information');
+                    showError(data.message || 'No files found in the response');
                 }
             } catch (err) {
-                showError('Network error. Please check your connection and try again.');
+                console.error('Fetch error:', err);
+                showError('Failed to fetch file information. Please check the URL and try again. Error: ' + err.message);
             } finally {
                 showLoading(false);
             }
@@ -148,12 +164,15 @@
             if (file.thumbnail) {
                 thumbnail.src = file.thumbnail;
                 thumbnail.style.display = 'block';
+                thumbnail.onerror = function() {
+                    this.style.display = 'none';
+                };
             } else {
                 thumbnail.style.display = 'none';
             }
             
-            fileName.textContent = file.name;
-            fileSize.textContent = `Size: ${file.size}`;
+            fileName.textContent = file.name || 'Unknown File';
+            fileSize.textContent = `Size: ${file.size || 'Unknown'}`;
             result.classList.remove('hidden');
         }
 
@@ -202,6 +221,20 @@
                 }
             }
         });
+
+        // Add CORS proxy option as fallback
+        async function fetchWithCorsProxy(url) {
+            const proxyUrl = 'https://api.allorigins.win/raw?url=';
+            const apiUrl = `https://teraboxapi.alphaapi.workers.dev/?url=${encodeURIComponent(url)}`;
+            
+            try {
+                const response = await fetch(proxyUrl + encodeURIComponent(apiUrl));
+                if (!response.ok) throw new Error('Network response was not ok');
+                return await response.json();
+            } catch (error) {
+                throw new Error('CORS proxy also failed: ' + error.message);
+            }
+        }
     </script>
 </body>
 </html>
